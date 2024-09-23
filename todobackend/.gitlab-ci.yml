@@ -1,0 +1,24 @@
+build:
+    stage: build
+   # Использование kaniko для создания контейнера внутри контейнера для большей безопасности.
+    image:
+      name: gcr.io/kaniko-project/executor:debug
+      entrypoint: [""]
+    script:
+      # Создаем папку и конфиг 
+      - mkdir -p /kaniko/.docker
+      - echo "{\"auths\":{\"$YC_CI_REGISTRY\":{\"auth\":\"$(echo -n "json_key:${YC_CI_REGISTRY_KEY}" | base64 | tr -d '\n' )\"}}}" > /kaniko/.docker/config.json
+      # Запускаем kaniko и отправляем образ в registry отмечая его хешем коммита.
+      - >-
+         /kaniko/executor
+         --context "${CI_PROJECT_DIR}"
+         --use-new-run
+         --snapshotMode=redo
+         --dockerfile "${CI_PROJECT_DIR}/Dockerfile"
+         --destination "${YC_CI_REGISTRY}/${CI_PROJECT_PATH}:${CI_COMMIT_SHORT_SHA}"
+    
+    rules:
+      # Добавим правило запуска только на основной ветке    
+      - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+
